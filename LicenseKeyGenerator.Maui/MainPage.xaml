@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:converters="clr-namespace:LicenseKeyGenerator.Maui.Converters"
+             x:Class="LicenseKeyGenerator.Maui.MainPage"
+             Title="许可证密钥生成器"
+             BackgroundColor="#F5F6FA">
+    
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:NotEmptyStringToBoolConverter x:Key="NotEmptyStringToBoolConverter"/>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="15">
+            
+            <!-- 序列号输入 -->
+            <Frame BackgroundColor="White" CornerRadius="8" HasShadow="True" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="序列号" FontSize="16" FontAttributes="Bold" TextColor="#2C3E50"/>
+                    <Entry x:Name="SerialEntry" 
+                           Placeholder="请输入序列号"
+                           BackgroundColor="#F8F9FA"
+                           Padding="10"
+                           FontSize="14"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- 盐值管理 -->
+            <Frame BackgroundColor="White" CornerRadius="8" HasShadow="True" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="盐值管理" FontSize="16" FontAttributes="Bold" TextColor="#2C3E50"/>
+                    
+                    <CollectionView x:Name="SaltCollectionView" 
+                                    HeightRequest="180"
+                                    SelectionMode="Single">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame Padding="10" Margin="0,0,0,5" BackgroundColor="#F8F9FA" CornerRadius="4">
+                                    <Grid ColumnDefinitions="*, Auto, Auto">
+                                        <VerticalStackLayout Grid.Column="0">
+                                            <Label Text="{Binding Salt}" FontAttributes="Bold" TextColor="#2C3E50"/>
+                                            <Label Text="{Binding Remark}" FontSize="12" TextColor="#7F8C8D" 
+                                                   IsVisible="{Binding Remark, Converter={StaticResource NotEmptyStringToBoolConverter}}"/>
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="1" Text="编辑" BackgroundColor="#F39C12" TextColor="White"
+                                                Padding="10,5" FontSize="12" Clicked="EditSalt_Click" CommandParameter="{Binding}"/>
+                                        <Button Grid.Column="2" Text="删除" BackgroundColor="#E74C3C" TextColor="White"
+                                                Padding="10,5" FontSize="12" Margin="5,0,0,0" Clicked="DeleteSalt_Click" CommandParameter="{Binding}"/>
+                                    </Grid>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    
+                    <Button Text="+ 添加盐值" BackgroundColor="#27AE60" TextColor="White" Padding="15,10"
+                            HorizontalOptions="Start" Clicked="AddSalt_Click"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- 授权类型 -->
+            <Frame BackgroundColor="White" CornerRadius="8" HasShadow="True" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="授权类型" FontSize="16" FontAttributes="Bold" TextColor="#2C3E50"/>
+                    
+                    <Grid ColumnDefinitions="*, Auto, *, Auto">
+                        <RadioButton x:Name="PermanentRadio" Text="永久授权" IsChecked="True" 
+                                     CheckedChanged="PermanentRadio_Checked" Grid.Column="0"/>
+                        <RadioButton x:Name="DaysRadio" Text="限时授权" 
+                                     CheckedChanged="DaysRadio_Checked" Grid.Column="2"/>
+                    </Grid>
+                    
+                    <HorizontalStackLayout Spacing="10">
+                        <Entry x:Name="DaysEntry" 
+                               Placeholder="天数"
+                               BackgroundColor="#F8F9FA"
+                               Padding="10"
+                               WidthRequest="100"
+                               IsEnabled="False"
+                               Keyboard="Numeric"/>
+                        <Label Text="天" VerticalOptions="Center" TextColor="#2C3E50"/>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- 生成密钥 -->
+            <Frame BackgroundColor="White" CornerRadius="8" HasShadow="True" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <HorizontalStackLayout Spacing="10">
+                        <Entry x:Name="KeyEntry" 
+                               Placeholder="生成的密钥将显示在这里"
+                               BackgroundColor="#F8F9FA"
+                               Padding="10"
+                               IsReadOnly="True"
+                               HorizontalOptions="FillAndExpand"/>
+                        <Button Text="复制" BackgroundColor="#3498DB" TextColor="White" Padding="15,10" Clicked="CopyKey_Click"/>
+                    </HorizontalStackLayout>
+                    
+                    <Button Text="生成密钥" BackgroundColor="#27AE60" TextColor="White" Padding="40,15"
+                            FontSize="16" HorizontalOptions="Center" Clicked="GenerateKey_Click"/>
+                </VerticalStackLayout>
+            </Frame>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
