@@ -1,0 +1,109 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'src/LicenseKeyGenerator.Maui/**'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'src/LicenseKeyGenerator.Maui/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (例如: 1.0.0)'
+        required: false
+        default: '1.0.0'
+      build_type:
+        description: '构建类型'
+        required: true
+        type: choice
+        options:
+          - Release
+          - Debug
+        default: 'Release'
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH: 'src/LicenseKeyGenerator.Maui/LicenseKeyGenerator.Maui.csproj'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: windows-2022
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 配置 .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: 安装 .NET MAUI 工作负载
+      run: dotnet workload install maui-android
+        
+    - name: 恢复 NuGet 包
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+      
+    - name: 构建 Android APK
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} `
+          -c ${{ inputs.build_type || 'Release' }} `
+          -f net8.0-android `
+          -p:AndroidPackageFormat=apk `
+          -p:AndroidKeyStore=False `
+          -p:ApplicationVersion=${{ github.run_number }} `
+          -p:ApplicationDisplayVersion=${{ inputs.version || '1.0.0' }}
+          
+    - name: 查找生成的 APK
+      id: find-apk
+      shell: pwsh
+      run: |
+        $apkPath = Get-ChildItem -Path "src/LicenseKeyGenerator.Maui/bin/${{ inputs.build_type || 'Release' }}/net8.0-android/publish" -Filter "*.apk" -Recurse | Select-Object -First 1
+        if ($apkPath) {
+          $apkName = $apkPath.Name
+          $apkFullPath = $apkPath.FullName
+          echo "APK_PATH=$apkFullPath" >> $env:GITHUB_OUTPUT
+          echo "APK_NAME=$apkName" >> $env:GITHUB_OUTPUT
+          echo "✓ 找到 APK: $apkFullPath"
+        } else {
+          echo "✗ 未找到 APK 文件"
+          exit 1
+        }
+        
+    - name: 上传 APK 构件
+      uses: actions/upload-artifact@v4
+      with:
+        name: LicenseKeyGenerator-Android-${{ inputs.build_type || 'Release' }}-${{ github.run_number }}
+        path: ${{ steps.find-apk.outputs.APK_PATH }}
+        retention-days: 30
+        
+    - name: 生成发布说明
+      shell: pwsh
+      run: |
+        $version = "${{ inputs.version || '1.0.0' }}"
+        $buildNumber = "${{ github.run_number }}"
+        $commitHash = "${{ github.sha }}".Substring(0, 7)
+        
+        "# 许可证密钥生成器 - Android APK`n`n" | Out-File -FilePath release-notes.md -Encoding utf8
+        "## 构建信息`n`n" | Out-File -FilePath release-notes.md -Append -Encoding utf8
+        "- **版本**: $version`n" | Out-File -FilePath release-notes.md -Append -Encoding utf8
+        "- **构建号**: $buildNumber`n" | Out-File -FilePath release-notes.md -Append -Encoding utf8
+        "- **提交**: $commitHash`n" | Out-File -FilePath release-notes.md -Append -Encoding utf8
+        "- **构建类型**: ${{ inputs.build_type || 'Release' }}`n" | Out-File -FilePath release-notes.md -Append -Encoding utf8
+        "- **构建时间**: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n`n" | Out-File -FilePath release-notes.md -Append -Encoding utf8
+        "## 功能特性`n`n" | Out-File -FilePath release-notes.md -Append -Encoding utf8
+        "- 输入设备序列号生成许可证密钥`n" | Out-File -FilePath release-notes.md -Append -Encoding utf8
+        "- 盐值管理（添加、编辑、删除）`n" | Out-File -FilePath release-notes.md -Append -Encoding utf8
+        "- 支持永久授权和限时授权`n" | Out-File -FilePath release-notes.md -Append -Encoding utf8
+        "- 一键复制生成的密钥`n" | Out-File -FilePath release-notes.md -Append -Encoding utf8
+        
+    - name: 上传发布说明
+      uses: actions/upload-artifact@v4
+      with:
+        name: Release-Notes
+        path: release-notes.md
+        retention-days: 30
